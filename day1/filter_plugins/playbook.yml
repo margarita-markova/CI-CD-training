@@ -1,0 +1,11 @@
+- hosts: appservers
+  vars:
+    accounts: 
+      - { name: vasya, id: 1234567 }
+      - { name: vavb, id: 1236778 }
+      - { name: basd, id: 1231111 }
+  
+  tasks:
+    - name: tuduu
+      debug:
+        msg: "{{ accounts }} "

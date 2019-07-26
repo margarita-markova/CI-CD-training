@@ -1,0 +1,17 @@
+- name: Ensure Facts Directory Exists
+  file:
+    path: /etc/ansible/facts.d
+    recurse: yes
+    state: directory
+  become: yes
+
+- name: Installation prerequisites
+  yum: 
+    name: "{{ item }}" 
+    state: present
+  with_items:
+    - git
+    - unzip
+    - epel-release
+  become: yes
+  no_log: True

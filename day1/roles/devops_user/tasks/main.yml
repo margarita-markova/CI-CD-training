@@ -1,0 +1,53 @@
+- name: Database of users/groups 
+  getent:
+    database: passwd
+    split: ' '
+  register: passwd_data 
+  become: yes
+
+- name: "Create group for user"
+  group:
+    name: "{{ groupname }}"
+    gid: "{{ passwd_data.ansible_facts.getent_passwd | dict2items | map(attribute='key') | join(':') | split(':') | numbers | max + 1 }}"
+  when: passwd_data.ansible_facts.getent_passwd | dict2items | map(attribute='key') | join(':') | split(':') | find_by(groupname) == False
+  become: yes
+
+- name: "Create user account"
+  user:
+    name: "{{ username }}"
+    group: "{{ groupname }}"
+    create_home: yes
+    append: yes 
+    uid: "{{ passwd_data.ansible_facts.getent_passwd | dict2items | map(attribute='key') | join(':') | split(':') | numbers | max + 1 }}"
+    state: present
+  register: user_info
+  become: yes
+  notify:
+    - save user facts
+  when: passwd_data.ansible_facts.getent_passwd | dict2items | map(attribute='key') | join(':') | split(':') | find_by(username) == False
+
+- name: "Add authorized keys"
+  authorized_key:
+    user: "{{ username }}"
+    key: "{{ item }}"
+    exclusive: yes
+    manage_dir: yes
+  with_fileglob:
+    - "{{ auth_key_dir }}"
+  become: yes
+
+- name: "Sudo privileges"
+  copy:  
+    src: devops
+    dest: "/etc/sudoers.d/{{ username }}"
+    backup: yes
+    validate: /usr/sbin/visudo -cf %s
+  become: yes
+
+- name: Disable requiretty for user
+  lineinfile:
+    dest: "/etc/sudoers.d/{{ username }}"
+    insertafter: EOF
+    line: "Defaults:{{ username }} !requiretty"
+    state: present
+  become: yes
