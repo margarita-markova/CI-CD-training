@@ -1,0 +1,66 @@
+load 'config.rb'
+
+def nodeIP(ips, id)
+  return ((IPAddr.new ips)|(1+id)).to_s()
+end
+
+Vagrant.configure("2") do |config|
+    config.vm.synced_folder ".", "/vagrant", 
+    owner: "vagrant", 
+    group: "vagrant"
+
+    node_name = "master" 
+
+    config.vm.define node_name do |node|
+        node.vm.box = "sbeliakou/centos"
+        node.vm.box_check_update = true
+        node.vm.hostname = node_name
+        node.vm.network :private_network, ip: nodeIP($cluster_ips, 0)
+
+        node.vm.provider :virtualbox do |vb|
+            vb.name = node_name
+            vb.memory = "2048"
+        end
+
+        node.vm.provision "shell", 
+            name: "Base Installation",
+            path: "scripts/common.sh",
+            env: {
+                VERSION:$version
+            }
+
+        node.vm.provision "shell",
+            name: "Master/Worker Installation",
+            path: "scripts/master.sh", 
+            args: [
+                "#{nodeIP($cluster_ips, 0)}",
+                "#{$token}"
+            ]
+
+        node.vm.provision "shell",
+            name: "One node configuration",
+            path: "scripts/onenode.sh"
+
+        node.vm.provision "shell", 
+            name: "Kubernetes Dashboard",
+            path: "scripts/dashboard.sh"
+
+        if $metallb
+        node.vm.provision "shell", 
+            name: "Metall LB",
+            path: "scripts/metallb.sh",
+            args: [
+                "#{$metallb_ips}"
+            ]
+        end
+
+        if $ingress_controller == "nginx"
+            node.vm.provision "shell", 
+                name: "Nginx Ingress Controller",
+                path: "scripts/ingress-nginx.sh",
+                args: [
+                    "#{$metallb}"
+                ]
+        end
+    end
+end

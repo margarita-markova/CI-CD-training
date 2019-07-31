@@ -1,0 +1,108 @@
+# kubectl -n kube-system create serviceaccount tiller
+# kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+# helm init --service-account tiller
+# helm install --name jenkins-master -f jenkins_values.yaml stable/jenkins
+# helm del --purge jenkins-master
+# printf $(kubectl get secret --namespace jenkins-ns-1 jenkins-master1 -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
+
+master:
+  # Used for label app.kubernetes.io/component
+  componentName: "jenkins-master"
+  image: "jenkins/jenkins"
+  tag: "lts"
+  imagePullPolicy: "Always"
+  # imagePullSecretName:
+
+  useSecurity: true
+  # Allows to configure different SecurityRealm using Jenkins XML
+  securityRealm: |-
+    <securityRealm class="hudson.security.LegacySecurityRealm"/>
+  # Allows to configure different AuthorizationStrategy using Jenkins XML
+  authorizationStrategy: |-
+     <authorizationStrategy class="hudson.security.FullControlOnceLoggedInAuthorizationStrategy">
+       <denyAnonymousReadAccess>true</denyAnonymousReadAccess>
+     </authorizationStrategy>
+  hostNetworking: false
+
+  adminUser: "jenkins"
+  adminEmail: "marksuree@mail"
+  jenkinsUrl: "http://jenkins"
+
+  resources:
+    requests:
+      cpu: "512m"
+      memory: "200m"
+
+  usePodSecurityContext: true
+
+  servicePort: 8080
+  targetPort: 8080
+  # For minikube, set this to NodePort, elsewhere use LoadBalancer
+  # Use ClusterIP if your setup includes ingress controller
+  serviceType: LoadBalancer
+
+  slaveListenerPort: 50000
+
+  loadBalancerSourceRanges:
+  - 0.0.0.0/0
+
+  javaOpts: >
+    -Dcom.sun.management.jmxremote.port=4000
+    -Dcom.sun.management.jmxremote.authenticate=false
+    -Dcom.sun.management.jmxremote.ssl=false
+    -Duser.home=/var/jenkins_home
+    -Djenkins.install.runSetupWizard=false 
+    -Djava.awt.headless=true 
+    -Dhudson.plugins.git.GitSCM.verbose=true 
+    -Dorg.apache.commons.jelly.tags.fmt.timeZone=Europe/Minsk 
+    -Duser.timezone=Europe/Minsk 
+    -Dhttps.protocols=TLSv1.2 
+    -Dorg.eclipse.jetty.server.Request.maxFormContentSize=5000000 
+    -Dhudson.plugins.parameterizedtrigger.ProjectSpecificParametersActionFactory.compatibility_mode=true 
+    -Dpermissive-script-security.enabled=true 
+    -XX:MaxMetaspaceSize=1g 
+    -XX:+CMSClassUnloadingEnabled 
+    -XX:+UseConcMarkSweepGC 
+    -XX:+DisableExplicitGC 
+    -Xms1000m 
+    -Xmx3000m 
+    -Dcom.sun.management.jmxremote.ssl=false 
+
+  # List of plugins to be install during Jenkins master start
+  installPlugins:
+    - kubernetes:1.16.0
+    - workflow-job:2.32
+    - workflow-aggregator:2.6
+    - credentials-binding:1.19
+    - git:3.10.0
+
+  persistence:
+    enabled: true
+    existingClaim:
+    annotations: {}
+    accessMode: ReadWriteOnce
+    size: 2Gi
+
+  ingress:
+    enabled: true
+    # For Kubernetes v1.14+, use 'networking.k8s.io/v1beta1'
+    apiVersion: "extensions/v1beta1"
+    labels: {}
+    annotations: 
+      nginx.ingress.kubernetes.io/rewrite-target: "/"
+    path: "/"
+    # configures the hostname e.g. jenkins.example.com
+    hostName: jenkins
+
+rbac:
+  install: false
+  serviceAccount:
+    name: default
+
+  ## Cluster role reference
+roleRef: cluster-admin
+
+agent:
+  enabled: false
+
+

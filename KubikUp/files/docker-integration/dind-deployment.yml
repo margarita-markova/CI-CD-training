@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dind
+  labels: 
+    app: dind
+spec:
+  selector:
+    matchLabels:
+      app: dind
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: dind
+    spec:
+      containers:
+      - name: docker-cmds 
+        image: docker:18.09
+        command: ['docker', 'run', '-p', '80:80', 'httpd']  
+        env: 
+        - name: DOCKER_HOST 
+          value: tcp://localhost:2375
+      - name: dind
+        image: docker:18.05-dind
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: dind-storage
+          mountPath: /var/lib/docker
+        # - mountPath: /var/run/docker.sock
+        #   name: docker-socket-volume
+      volumes:
+      - name: dind-storage
+        emptyDir: {}
+      - name: docker-socket-volume
+        # hostPath:
+        #   path: /var/run/docker.sock
+        #   type: File
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: dind-svc
+#   labels:
+#     app: dind
+# spec:
+#   type: NodePort
+#   ports:
+#   - port: 80
+#   selector:
+#     app: dind
