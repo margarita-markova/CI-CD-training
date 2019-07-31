@@ -1,0 +1,8 @@
+- name: save common details
+  copy: 
+    content: >
+      {
+        "installation_prerequsites": "success"
+      }
+    dest: /etc/ansible/facts.d/common.fact
+  become: yes

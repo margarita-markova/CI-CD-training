@@ -1,0 +1,5 @@
+---
+jenkins_user: jenkins
+jenkins_group: jenkins
+war_url: "http://mirrors.jenkins.io/war-stable/latest/jenkins.war"
+jenkins_war_home: /opt/jenkins/

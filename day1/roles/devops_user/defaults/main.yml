@@ -1,0 +1,6 @@
+groupname: "{{ username }}"
+groups_list: ''
+sudo_priveleges: ""
+auth_key_dir: ""
+home_dir: ""
+
